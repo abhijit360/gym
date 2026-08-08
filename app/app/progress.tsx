@@ -16,31 +16,32 @@ export default function ProgressScreen() {
     setWorkouts(loaded);
   }
 
-  // Calculate workout frequency over last 30 days
-  const getWorkoutFrequency = () => {
-    const last30Days = workouts.filter(w => {
+  // Calculate workout frequency over last 4 weeks
+  function getWorkoutFrequency() {
+    const now = new Date();
+    const fourWeeksAgo = new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000);
+    
+    const recentWorkouts = workouts.filter(w => {
       const date = new Date(w.date);
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      return date >= thirtyDaysAgo;
+      return date >= fourWeeksAgo && date <= now;
     });
 
     // Group by week
     const weeks = [0, 0, 0, 0];
-    last30Days.forEach(w => {
+    recentWorkouts.forEach(w => {
       const date = new Date(w.date);
-      const daysAgo = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+      const daysAgo = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
       const weekIndex = Math.min(Math.floor(daysAgo / 7), 3);
       weeks[3 - weekIndex]++;
     });
 
     return weeks;
-  };
+  }
 
   const chartData = {
     labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
     datasets: [{
-      data: getWorkoutFrequency(),
+      data: getWorkoutFrequency().length > 0 ? getWorkoutFrequency() : [0, 0, 0, 0],
     }],
   };
 
@@ -69,44 +70,55 @@ export default function ProgressScreen() {
 
       {/* Workout frequency chart */}
       <Text style={styles.chartTitle}>Workout Frequency</Text>
-      <LineChart
-        data={chartData}
-        width={Dimensions.get('window').width - 32}
-        height={220}
-        chartConfig={{
-          backgroundColor: '#fff',
-          backgroundGradientFrom: '#fff',
-          backgroundGradientTo: '#fff',
-          decimalPlaces: 0,
-          color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`,
-          labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-          style: {
-            borderRadius: 16,
-          },
-          propsForDots: {
-            r: '6',
-            strokeWidth: '2',
-            stroke: '#007AFF',
-          },
-        }}
-        bezier
-        style={styles.chart}
-      />
+      {workouts.length > 0 ? (
+        <LineChart
+          data={chartData}
+          width={Dimensions.get('window').width - 32}
+          height={220}
+          chartConfig={{
+            backgroundColor: '#fff',
+            backgroundGradientFrom: '#fff',
+            backgroundGradientTo: '#fff',
+            decimalPlaces: 0,
+            color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`,
+            labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+            style: {
+              borderRadius: 16,
+            },
+            propsForDots: {
+              r: '6',
+              strokeWidth: '2',
+              stroke: '#007AFF',
+            },
+          }}
+          bezier
+          style={styles.chart}
+        />
+      ) : (
+        <View style={styles.emptyChart}>
+          <Text style={styles.emptyText}>No workout data yet</Text>
+          <Text style={styles.emptySubtext}>Start logging workouts to see your progress!</Text>
+        </View>
+      )}
 
       {/* Workout type breakdown */}
       <Text style={styles.chartTitle}>Workout Types</Text>
       <View style={styles.typeBreakdown}>
-        {Object.entries(
-          workouts.reduce((acc, w) => {
-            acc[w.type] = (acc[w.type] || 0) + 1;
-            return acc;
-          }, {} as Record<string, number>)
-        ).map(([type, count]) => (
-          <View key={type} style={styles.typeRow}>
-            <Text style={styles.typeName}>{type}</Text>
-            <Text style={styles.typeCount}>{count}</Text>
-          </View>
-        ))}
+        {workouts.length > 0 ? (
+          Object.entries(
+            workouts.reduce((acc, w) => {
+              acc[w.type] = (acc[w.type] || 0) + 1;
+              return acc;
+            }, {} as Record<string, number>)
+          ).map(([type, count]) => (
+            <View key={type} style={styles.typeRow}>
+              <Text style={styles.typeName}>{type}</Text>
+              <Text style={styles.typeCount}>{count}</Text>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.emptyText}>No workouts logged</Text>
+        )}
       </View>
     </ScrollView>
   );
@@ -122,6 +134,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 24,
+    marginTop: 40,
   },
   statsContainer: {
     flexDirection: 'row',
@@ -153,6 +166,22 @@ const styles = StyleSheet.create({
   chart: {
     marginVertical: 8,
     borderRadius: 16,
+  },
+  emptyChart: {
+    padding: 40,
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 16,
+    marginBottom: 24,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#999',
+    marginBottom: 4,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#ccc',
   },
   typeBreakdown: {
     backgroundColor: '#f5f5f5',

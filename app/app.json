@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "GymTune",
+    "slug": "gym-tune",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.abhijit360.gymtune"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.abhijit360.gymtune"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "scheme": "gymtune",
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}

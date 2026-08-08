@@ -1,17 +1,18 @@
-import RNFS from 'react-native-fs';
+import * as FileSystem from 'expo-file-system';
 import YAML from 'yaml';
-import type { Workout, WorkoutMetadata } from './types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { Workout, WorkoutMetadata, EquipmentProfile } from './types';
 
-const WORKOUTS_DIR = `${RNFS.DocumentDirectoryPath}/workouts`;
+const WORKOUTS_DIR = `${FileSystem.documentDirectory}workouts/`;
 
 export class WorkoutStorage {
   /**
    * Initialize storage directory
    */
   static async init() {
-    const exists = await RNFS.exists(WORKOUTS_DIR);
-    if (!exists) {
-      await RNFS.mkdir(WORKOUTS_DIR);
+    const info = await FileSystem.getInfoAsync(WORKOUTS_DIR);
+    if (!info.exists) {
+      await FileSystem.makeDirectoryAsync(WORKOUTS_DIR, { intermediates: true });
     }
   }
 
@@ -58,10 +59,20 @@ export class WorkoutStorage {
    */
   static fromMarkdown(id: string, content: string): Workout {
     const parts = content.split('---');
+    if (parts.length < 3) {
+      // Invalid format, return minimal workout
+      return {
+        id,
+        date: new Date().toISOString().split('T')[0],
+        type: 'other',
+        exercises: [],
+      };
+    }
+
     const metadata = YAML.parse(parts[1]) as WorkoutMetadata;
     const body = parts[2]?.trim() || '';
 
-    // Simple parsing - in production, the LLM would help here
+    // Basic parsing - for Phase 0, just preserve the body as notes
     const workout: Workout = {
       id,
       date: metadata.date,
@@ -80,9 +91,9 @@ export class WorkoutStorage {
   static async save(workout: Workout): Promise<void> {
     await this.init();
     const filename = `${workout.date}_${workout.id}.md`;
-    const filepath = `${WORKOUTS_DIR}/${filename}`;
+    const filepath = `${WORKOUTS_DIR}${filename}`;
     const markdown = this.toMarkdown(workout);
-    await RNFS.writeFile(filepath, markdown, 'utf8');
+    await FileSystem.writeAsStringAsync(filepath, markdown);
   }
 
   /**
@@ -90,12 +101,13 @@ export class WorkoutStorage {
    */
   static async load(id: string): Promise<Workout | null> {
     await this.init();
-    const files = await RNFS.readDir(WORKOUTS_DIR);
-    const file = files.find(f => f.name.includes(id));
+    const files = await FileSystem.readDirectoryAsync(WORKOUTS_DIR);
+    const file = files.find(f => f.includes(id));
     
     if (!file) return null;
     
-    const content = await RNFS.readFile(file.path, 'utf8');
+    const filepath = `${WORKOUTS_DIR}${file}`;
+    const content = await FileSystem.readAsStringAsync(filepath);
     return this.fromMarkdown(id, content);
   }
 
@@ -104,13 +116,14 @@ export class WorkoutStorage {
    */
   static async loadAll(): Promise<Workout[]> {
     await this.init();
-    const files = await RNFS.readDir(WORKOUTS_DIR);
-    const mdFiles = files.filter(f => f.name.endsWith('.md'));
+    const files = await FileSystem.readDirectoryAsync(WORKOUTS_DIR);
+    const mdFiles = files.filter(f => f.endsWith('.md'));
     
     const workouts = await Promise.all(
       mdFiles.map(async file => {
-        const content = await RNFS.readFile(file.path, 'utf8');
-        const id = file.name.split('_')[1]?.replace('.md', '') || file.name;
+        const filepath = `${WORKOUTS_DIR}${file}`;
+        const content = await FileSystem.readAsStringAsync(filepath);
+        const id = file.split('_')[1]?.replace('.md', '') || file;
         return this.fromMarkdown(id, content);
       })
     );
@@ -123,10 +136,37 @@ export class WorkoutStorage {
    */
   static async delete(id: string): Promise<void> {
     await this.init();
-    const files = await RNFS.readDir(WORKOUTS_DIR);
-    const file = files.find(f => f.name.includes(id));
+    const files = await FileSystem.readDirectoryAsync(WORKOUTS_DIR);
+    const file = files.find(f => f.includes(id));
     if (file) {
-      await RNFS.unlink(file.path);
+      const filepath = `${WORKOUTS_DIR}${file}`;
+      await FileSystem.deleteAsync(filepath);
     }
+  }
+}
+
+/**
+ * Equipment profile storage (AsyncStorage)
+ */
+export class EquipmentStorage {
+  private static STORAGE_KEY = '@gymtune:equipment';
+
+  static async save(profile: EquipmentProfile): Promise<void> {
+    await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(profile));
+  }
+
+  static async load(): Promise<EquipmentProfile> {
+    const data = await AsyncStorage.getItem(this.STORAGE_KEY);
+    if (data) {
+      return JSON.parse(data);
+    }
+    // Default: all equipment available
+    return {
+      barbell: true,
+      dumbbells: true,
+      cables: true,
+      machines: true,
+      bodyweight: true,
+    };
   }
 }
