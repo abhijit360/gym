@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Expo SDK 51 → 54 Migration — GymTune</title>
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161b22;--panel2:#1c2330;--border:#30363d;
+    --txt:#e6edf3;--muted:#9da7b3;--accent:#4dd0e1;--accent2:#7c9cff;
+    --crit:#f85149;--high:#ffa657;--med:#e3b341;--low:#3fb950;--rm:#db61a2;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  header{padding:28px 32px;border-bottom:1px solid var(--border);
+    background:linear-gradient(120deg,#161b22,#1c2330)}
+  header h1{margin:0 0 6px;font-size:22px}
+  header .sub{color:var(--muted);font-size:13px}
+  .wrap{max-width:1100px;margin:0 auto;padding:24px 32px 64px}
+  h2{font-size:17px;margin:34px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+  h3{font-size:14px;margin:18px 0 8px;color:var(--accent)}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:16px 0}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px}
+  .card .k{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+  .card .v{font-size:20px;font-weight:600;margin-top:4px}
+  .card .v small{font-size:12px;color:var(--muted);font-weight:400}
+  table{width:100%;border-collapse:collapse;margin:8px 0 4px;font-size:13px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+  tr:hover td{background:var(--panel2)}
+  code{background:#0b0f14;border:1px solid var(--border);border-radius:5px;padding:1px 5px;font-size:12px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .bump{color:var(--accent2)} .arrow{color:var(--muted);padding:0 4px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+  .p-crit{background:rgba(248,81,73,.15);color:var(--crit);border:1px solid var(--crit)}
+  .p-high{background:rgba(255,166,87,.15);color:var(--high);border:1px solid var(--high)}
+  .p-med{background:rgba(227,179,65,.15);color:var(--med);border:1px solid var(--med)}
+  .p-low{background:rgba(63,185,80,.13);color:var(--low);border:1px solid var(--low)}
+  .p-remove{background:rgba(219,97,162,.15);color:var(--rm);border:1px solid var(--rm)}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;margin:12px 0}
+  .phase{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--accent);
+    border-radius:8px;padding:14px 16px;margin:10px 0}
+  .phase h3{margin:0 0 8px;color:var(--txt)}
+  .phase ol{margin:6px 0 10px;padding-left:20px}
+  .phase li{margin:3px 0}
+  .chk{background:rgba(77,208,225,.08);border:1px dashed var(--accent);border-radius:6px;
+    padding:8px 10px;font-size:12px;color:var(--accent)}
+  .chk::before{content:"✓ CHECKPOINT — ";font-weight:700}
+  .muted{color:var(--muted)}
+  .change-item{padding:10px 0;border-bottom:1px solid var(--border)}
+  .change-item:last-child{border-bottom:none}
+  .change-item .hd{display:flex;gap:10px;align-items:center;margin-bottom:4px}
+  .change-item .hd b{font-size:13px}
+  .src{font-size:11px;color:var(--muted);margin-top:3px}
+  .src a{color:var(--accent2);text-decoration:none}
+  a{color:var(--accent2)}
+  .legend{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+  footer{color:var(--muted);font-size:12px;border-top:1px solid var(--border);margin-top:40px;padding-top:16px}
+  .risk-h{font-weight:600}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="doc-title">Migration Plan</h1>
+  <div class="sub" id="doc-sub"></div>
+</header>
+<div class="wrap" id="app"></div>
+
+<script id="plan-data" type="application/json">
+{
+  "title": "Expo SDK 51 → 54 Migration — GymTune",
+  "subtitle": "Managed Expo Router app · /mnt/c/Users/kamat/gym-tune/app · authored 2026-08-08",
+  "summary": "GymTune is a tiny managed Expo Router app: 3 route files and 2 lib files, Expo Go workflow, no eas.json / babel / metro / app.config, no custom native code. The one mandatory code change is expo-file-system (legacy functions moved to expo-file-system/legacy in SDK 54). Everything else is version bumps and validation. Three declared deps are never imported (react-native-fs, react-native-paper, date-fns); removing them, especially react-native-fs, clears the biggest risk for free.",
+  "meta": {
+    "Complexity": "Low–Moderate",
+    "Estimated effort": "0.5–1.5 days",
+    "Mandatory code changes": "1 (expo-file-system)",
+    "Dead deps to remove": "3"
+  },
+  "inventory_files": [
+    ["package.json","present","main: expo-router/entry; yarn declared BUT package-lock.json also present (lockfile ambiguity)"],
+    ["app.json","present","plugins:[expo-router]; splash present; NO statusBar key; NO newArchEnabled"],
+    ["tsconfig.json","present","extends expo/tsconfig.base; strict; alias @/* -> ./*"],
+    ["eas.json","absent","not on EAS Build"],
+    ["babel.config.js","absent","default babel-preset-expo"],
+    ["metro.config.js","absent","default Metro"],
+    ["app.config.js/.ts","absent","static app.json only"]
+  ],
+  "versions": [
+    {"pkg":"expo","from":"~51.0.0","to":"~54.0.0","used":true},
+    {"pkg":"expo-router","from":"~3.5.0","to":"~6.0.24","used":true},
+    {"pkg":"react","from":"18.2.0","to":"19.1.0","used":true},
+    {"pkg":"react-dom","from":"—","to":"19.1.0","used":false},
+    {"pkg":"react-native","from":"0.74.0","to":"0.81.5","used":true},
+    {"pkg":"expo-file-system","from":"~17.0.0","to":"~19.0.23","used":true},
+    {"pkg":"@react-native-async-storage/async-storage","from":"^1.21.0","to":"2.2.0","used":true},
+    {"pkg":"react-native-svg","from":"^15.0.0","to":"15.12.1","used":"transitive"},
+    {"pkg":"react-native-chart-kit","from":"^6.12.0","to":"7.0.2","used":true},
+    {"pkg":"react-native-safe-area-context","from":"via router","to":"~5.6.0","used":true},
+    {"pkg":"expo-status-bar","from":"via expo","to":"~3.0.9","used":false},
+    {"pkg":"yaml","from":"^2.4.0","to":"keep ^2.4.0","used":true},
+    {"pkg":"@types/react (dev)","from":"~18.2.0","to":"~19.1.0","used":true},
+    {"pkg":"typescript (dev)","from":"^5.3.0","to":"~5.9.2","used":true},
+    {"pkg":"@babel/core (dev)","from":"^7.24.0","to":"^7.26.0","used":true},
+    {"pkg":"react-native-fs","from":"^2.20.0","to":"REMOVE","used":false},
+    {"pkg":"react-native-paper","from":"^5.12.0","to":"REMOVE (unused)","used":false},
+    {"pkg":"date-fns","from":"^3.0.0","to":"REMOVE (unused)","used":false}
+  ],
+  "progression": [
+    ["react","18.2.0 (51)","18.3.1 (52)","19.0.0 (53)","19.1.0 (54)"],
+    ["react-native","0.74.5 (51)","0.76.9 (52)","0.79.6 (53)","0.81.5 (54)"],
+    ["expo-router","~3.5 (51)","~4.0 (52)","~5.1 (53)","~6.0 (54)"],
+    ["expo-file-system","~17 (51)","~18.0 (52)","~18.1 (53)","~19.0 (54)"]
+  ],
+  "breaking": [
+    {"sev":"crit","title":"expo-file-system API move (SDK 54)","impact":"New File/Directory/Paths API is now default; legacy functions the app uses (documentDirectory, getInfoAsync, makeDirectoryAsync, writeAsStringAsync, readAsStringAsync, readDirectoryAsync, deleteAsync) moved to expo-file-system/legacy. All in lib/storage.ts. Legacy removed in SDK 55.","src":"expo.dev/changelog/sdk-54"},
+    {"sev":"high","title":"New Architecture default (SDK 53+)","impact":"Default in 53/54; SDK 54 is last release allowing opt-out. All runtime native deps here support New Arch (svg Fabric, async-storage TurboModule, expo-file-system). Recommendation: adopt, do not opt out.","src":"docs.expo.dev/guides/new-architecture"},
+    {"sev":"high","title":"Android edge-to-edge always on (SDK 54)","impact":"Cannot be disabled; targetSdk/compileSdk = 36. Content can render under status/nav bars. App has no safe-area handling today. Add react-native-safe-area-context insets.","src":"expo.dev/changelog/sdk-54"},
+    {"sev":"med","title":"React 18 → 19","impact":"propTypes/string refs removed, new JSX transform, stricter ref/effect. App is function components + hooks; realistic exposure is @types/react 19 type errors under strict. Bump types+TS and run tsc.","src":"react.dev/blog/2024/04/25/react-19-upgrade-guide"},
+    {"sev":"med","title":"react-native-chart-kit on abandoned 6.x","impact":"^6.12.0 emits ERESOLVE/EBADENGINE vs React 19 / RN 0.81 / svg 15. Revived 7.0.2 declares matching peers; LineChart import path preserved. Upgrade + smoke-test chart.","src":"github.com/chart-kit/react-native-chart-kit"},
+    {"sev":"low","title":"expo-router v3 → v6","impact":"No breaking change to Stack/Stack.Screen used here. v4 changed navigate()/removed Href<T> generics — app uses neither. Typed routes opt-in. Navigation smoke test only.","src":"expo.dev/changelog"},
+    {"sev":"low","title":"async-storage 1.x → 2.2.0","impact":"TurboModule bump; get/set API unchanged. Do NOT use 3.x (incompatible). expo install pins 2.2.0.","src":"bundledNativeModules@sdk-54"},
+    {"sev":"low","title":"app.json schema tightened","impact":"Root/android statusBar key rejected; app.json has none, so no change. splash still works (Android-12 splash API). Optional expo-splash-screen plugin later.","src":"expo.dev/changelog/sdk-52"},
+    {"sev":"low","title":"Tooling minimums","impact":"Node >=20.19.4, Xcode >=16.1, TS ~5.9.2, Metro 0.83. No metro/babel config in repo, so SDK 54 defaults apply automatically.","src":"expo.dev/changelog/sdk-54"},
+    {"sev":"remove","title":"react-native-fs — delete","impact":"Unmaintained (2022), no New Arch, bare native module needing prebuild/dev-client, breaks Expo Go. NOT imported anywhere. Expo says replace with expo-file-system.","src":"github.com/itinance/react-native-fs#1263"}
+  ],
+  "config_changes": [
+    ["package.json","Bump per version table; remove react-native-fs (+ unused paper/date-fns); resolve lockfile (pick yarn OR npm, delete the other).","Yes"],
+    ["app.json","No structural change. Optionally add newArchEnabled:true (already default). Do NOT add a statusBar key.","Optional"],
+    ["tsconfig.json","No change. expo/tsconfig.base tracks the SDK; keep strict.","No"],
+    ["babel.config.js","Do NOT create. Default preset handles SDK 54.","No"],
+    ["metro.config.js","Do NOT create unless a package-exports issue appears (temporary opt-out fallback only).","No (fallback)"],
+    ["eas.json","Out of scope (not on EAS Build).","No"]
+  ],
+  "code_changes": [
+    {"file":"lib/storage.ts","title":"File-system migration (MANDATORY)","body":"Option A (recommended cutover): change import to `expo-file-system/legacy`, zero logic change. Option B (durable, pre-SDK-55): rewrite to File/Directory/Paths — note directory.list() returns objects, so string ops must use .name. Ship A now, file B as follow-up."},
+    {"file":"app/progress.tsx","title":"Chart library","body":"No source edit if upgrading react-native-chart-kit to 7.0.2 (LineChart path preserved). Smoke-test the rendered chart and press behavior."},
+    {"file":"index.tsx / progress.tsx","title":"Safe-area insets","body":"Edge-to-edge forced on Android. Use SafeAreaView / useSafeAreaInsets from react-native-safe-area-context if content clips. Decide after first device run."},
+    {"file":"(scan)","title":"React 19 scan","body":"Grep for propTypes, defaultProps on function comps, class components, string refs, legacy ReactDOM. Expect none; fix only what tsc flags."}
+  ],
+  "phases": [
+    {"n":0,"name":"Baseline and safety","steps":[
+      "Confirm Node >=20.19.4 (node -v); upgrade toolchain if lower.",
+      "Commit/stash; create branch expo-sdk-54-migration; record baseline npx expo-doctor output.",
+      "Decide package manager (yarn vs npm) and delete the other lockfile so --fix writes one consistent lock."
+    ],"check":"Clean git status on a fresh branch; node -v OK; one lockfile only."},
+    {"n":1,"name":"Remove dead dependencies","steps":[
+      "Remove react-native-fs (unused, incompatible). Remove react-native-paper and date-fns unless near-term use is planned.",
+      "Reinstall; run the app on SDK 51 once to confirm nothing changed."
+    ],"check":"App still starts on SDK 51; home + progress screens render."},
+    {"n":2,"name":"Bump the SDK","steps":[
+      "npx expo install expo@^54.0.0 --fix (upgrades expo, react, react-native, expo-router, expo-file-system, svg, async-storage, dev types/TS).",
+      "Manually upgrade react-native-chart-kit to 7.0.2 (not managed by expo install).",
+      "npx expo install react-native-safe-area-context (~5.6.0).",
+      "npx expo install --check / npx expo-doctor@latest; resolve every mismatch; add overrides/resolutions only if a peer pins React 18."
+    ],"check":"expo-doctor passes; package.json matches target versions; lockfile regenerated with no ERESOLVE."},
+    {"n":3,"name":"Code migration","steps":[
+      "Apply expo-file-system change in lib/storage.ts (Option A: import from expo-file-system/legacy).",
+      "Run npx tsc --noEmit (TS ~5.9.2, @types/react ~19.1.0); fix React 19 type errors.",
+      "React 19 scan; fix anything found."
+    ],"check":"tsc --noEmit clean; no type regressions."},
+    {"n":4,"name":"Run and validate on device","steps":[
+      "npx expo start -c; launch in Expo Go (SDK 54) or dev client on iOS AND Android.",
+      "Exercise flows: create/save workout (file write), load all (list+sort), delete (file remove), equipment profile save/load (AsyncStorage), progress LineChart, expo-router navigation.",
+      "Android edge-to-edge: confirm no content hidden under bars; apply insets if clipped, re-run.",
+      "New Architecture: confirm app runs under New Arch (default); update lib or last-resort newArchEnabled:false (SDK 54 only)."
+    ],"check":"Every flow works on iOS + Android; file read/write/delete verified; chart renders; no insets clipping."},
+    {"n":5,"name":"Cleanup and close","steps":[
+      "Remove temporary overrides/resolutions or metro opt-outs no longer needed.",
+      "Update README.md if it names the SDK version.",
+      "Commit. File follow-up ticket for expo-file-system Option B before SDK 55."
+    ],"check":"Clean tree; expo-doctor green; single commit/PR ready."}
+  ],
+  "risks": [
+    ["Lockfile ambiguity (yarn declared, package-lock.json present)","High","Medium","Phase 0: pick one PM, delete the other lockfile before --fix."],
+    ["Android edge-to-edge clips UI (no safe-area today)","Medium","Medium","Add safe-area insets (§code); validate at Checkpoint 4."],
+    ["New Arch surfaces a native-lib bug","Low–Medium","Medium","All deps New-Arch-ready; update to target pins; last-resort opt-out (SDK 54 only)."],
+    ["chart-kit peer/resolver conflict on 6.x","Medium","Low","Upgrade to 7.0.2 (matching RN 0.81 / React 19 / svg 15 peers)."],
+    ["React 19 type errors under strict","Medium","Low","Bump @types/react + typescript together; fix at Checkpoint 3."],
+    ["Legacy file-system removed in SDK 55 (Option A is debt)","Certain (future)","Low","Follow-up ticket for Option B rewrite."],
+    ["Direct 51→54 jump hits a resolver wall","Low","Medium","Fallback: incremental 52 → 53 → 54, expo-doctor at each hop."]
+  ],
+  "effort": [
+    ["0 Baseline + lockfile","0.5–1 h"],
+    ["1 Remove dead deps","0.25 h"],
+    ["2 SDK bump + doctor","1–2 h"],
+    ["3 Code migration","0.5–1 h"],
+    ["4 Device validation (iOS+Android)","2–4 h"],
+    ["5 Cleanup + PR","0.5 h"],
+    ["Total","~0.5–1.5 days"]
+  ],
+  "sources": [
+    ["Expo SDK 54 changelog","https://expo.dev/changelog/sdk-54"],
+    ["Expo SDK 53 changelog","https://expo.dev/changelog/sdk-53"],
+    ["Expo SDK 52 changelog","https://expo.dev/changelog/2024-11-12-sdk-52"],
+    ["Upgrade walkthrough","https://docs.expo.dev/workflow/upgrading-expo-sdk-walkthrough/"],
+    ["New Architecture guide","https://docs.expo.dev/guides/new-architecture/"],
+    ["bundledNativeModules@sdk-54","https://github.com/expo/expo/blob/sdk-54/packages/expo/bundledNativeModules.json"],
+    ["expo-file-system (new) docs","https://docs.expo.dev/versions/v54.0.0/sdk/filesystem/"],
+    ["expo-file-system legacy docs","https://docs.expo.dev/versions/v54.0.0/sdk/filesystem-legacy/"],
+    ["React 19 upgrade guide","https://react.dev/blog/2024/04/25/react-19-upgrade-guide"],
+    ["RN 0.81 blog","https://reactnative.dev/blog/2025/08/12/react-native-0.81"],
+    ["react-native-chart-kit (revived)","https://github.com/chart-kit/react-native-chart-kit"],
+    ["react-native-fs status","https://github.com/itinance/react-native-fs/issues/1263"]
+  ]
+}
+</script>
+
+<script>
+const P = JSON.parse(document.getElementById('plan-data').textContent);
+const el = (t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
+const sevClass = {crit:'p-crit',high:'p-high',med:'p-med',low:'p-low',remove:'p-remove'};
+const sevLabel = {crit:'CRITICAL',high:'HIGH',med:'MEDIUM',low:'LOW',remove:'REMOVE'};
+const esc = s => String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+document.getElementById('doc-title').textContent = P.title;
+document.getElementById('doc-sub').textContent = P.subtitle;
+const app = document.getElementById('app');
+
+function table(headers, rows, render){
+  const t = el('table'); const thead = el('thead'); const tr = el('tr');
+  headers.forEach(h=>tr.appendChild(el('th',null,h))); thead.appendChild(tr); t.appendChild(thead);
+  const tb = el('tbody');
+  rows.forEach(r=>{ const row = el('tr'); render(r).forEach(cell=>{ const td=el('td'); td.innerHTML=cell; row.appendChild(td);}); tb.appendChild(row);});
+  t.appendChild(tb); return t;
+}
+function section(title){ app.appendChild(el('h2',null,title)); }
+
+// Summary
+section('Executive summary');
+app.appendChild(el('div','panel',esc(P.summary)));
+const cards = el('div','cards');
+Object.entries(P.meta).forEach(([k,v])=>{
+  const c=el('div','card'); c.appendChild(el('div','k',esc(k))); c.appendChild(el('div','v',esc(v))); cards.appendChild(c);
+});
+app.appendChild(cards);
+
+// Inventory
+section('1. Current-state inventory — config files');
+app.appendChild(table(['File','Status','Notes'], P.inventory_files, r=>[
+  '<code>'+esc(r[0])+'</code>',
+  r[1]==='present'?'<span class="pill p-low">present</span>':'<span class="pill p-med">'+esc(r[1])+'</span>',
+  esc(r[2])
+]));
+
+// Versions
+section('2. Target versions for SDK 54');
+app.appendChild(table(['Package','Current','SDK 54 target','Used in source'], P.versions, r=>{
+  const to = /REMOVE/.test(r.to)?'<span class="pill p-remove">'+esc(r.to)+'</span>':'<span class="bump">'+esc(r.to)+'</span>';
+  const used = r.used===true?'<span class="pill p-low">yes</span>':r.used===false?'<span class="muted">no</span>':'<span class="muted">'+esc(r.used)+'</span>';
+  return ['<code>'+esc(r.pkg)+'</code>', '<span class="muted">'+esc(r.from)+'</span>', to, used];
+}));
+app.appendChild(el('h3',null,'Version progression across the jump'));
+app.appendChild(table(['Package','SDK 51','SDK 52','SDK 53','SDK 54'], P.progression, r=>[
+  '<code>'+esc(r[0])+'</code>', esc(r[1]), esc(r[2]), esc(r[3]), '<span class="bump">'+esc(r[4])+'</span>'
+]));
+
+// Breaking
+section('3. Breaking changes that affect this app');
+const legend = el('div','legend');
+['crit','high','med','low','remove'].forEach(s=>legend.appendChild(el('span','pill '+sevClass[s],sevLabel[s])));
+app.appendChild(legend);
+const bpanel = el('div','panel');
+P.breaking.forEach(b=>{
+  const item = el('div','change-item');
+  const hd = el('div','hd');
+  hd.appendChild(el('span','pill '+sevClass[b.sev],sevLabel[b.sev]));
+  hd.appendChild(el('b',null,esc(b.title)));
+  item.appendChild(hd);
+  item.appendChild(el('div',null,esc(b.impact)));
+  item.appendChild(el('div','src','source: '+esc(b.src)));
+  bpanel.appendChild(item);
+});
+app.appendChild(bpanel);
+
+// Config changes
+section('4. Config file changes');
+app.appendChild(table(['File','Change','Required?'], P.config_changes, r=>[
+  '<code>'+esc(r[0])+'</code>', esc(r[1]),
+  /^Yes/.test(r[2])?'<span class="pill p-high">'+esc(r[2])+'</span>':'<span class="pill p-low">'+esc(r[2])+'</span>'
+]));
+
+// Code changes
+section('5. Code changes / API migrations');
+P.code_changes.forEach(c=>{
+  const pan = el('div','panel');
+  pan.appendChild(el('h3',null,esc(c.title)+' — <code>'+esc(c.file)+'</code>'));
+  pan.appendChild(el('div',null,esc(c.body)));
+  app.appendChild(pan);
+});
+
+// Phases
+section('6. Step-by-step execution order');
+P.phases.forEach(ph=>{
+  const d = el('div','phase');
+  d.appendChild(el('h3',null,'Phase '+ph.n+' — '+esc(ph.name)));
+  const ol = el('ol'); ph.steps.forEach(s=>ol.appendChild(el('li',null,esc(s)))); d.appendChild(ol);
+  d.appendChild(el('div','chk',esc(ph.check)));
+  app.appendChild(d);
+});
+
+// Risks
+section('7. Risks and rollback');
+app.appendChild(table(['Risk','Likelihood','Impact','Mitigation'], P.risks, r=>[
+  '<span class="risk-h">'+esc(r[0])+'</span>', esc(r[1]), esc(r[2]), esc(r[3])
+]));
+app.appendChild(el('div','panel','<b>Rollback:</b> all work is on a branch with a single lockfile. Revert via <code>git checkout main</code> + reinstall to restore the SDK 51 lock. No <code>ios/</code> or <code>android/</code> dirs exist (fully managed). Keep the Phase 0 expo-doctor baseline for comparison.'));
+
+// Effort
+section('8. Effort / complexity');
+app.appendChild(table(['Phase','Effort'], P.effort, r=>[
+  /Total/.test(r[0])?'<b>'+esc(r[0])+'</b>':esc(r[0]),
+  /Total/.test(r[0])?'<b class="bump">'+esc(r[1])+'</b>':esc(r[1])
+]));
+
+// Sources
+section('Appendix — primary sources');
+const ul = el('div','panel');
+P.sources.forEach(s=>{
+  const line = el('div',null,'<a href="'+esc(s[1])+'" target="_blank" rel="noopener">'+esc(s[0])+'</a> <span class="muted">— '+esc(s[1])+'</span>');
+  line.style.padding='3px 0'; ul.appendChild(line);
+});
+app.appendChild(ul);
+
+app.appendChild(el('footer',null,'Self-rendering dashboard. Plan data is embedded as JSON in this file (<code>#plan-data</code>) and mirrors <code>plan.md</code>. Regenerate both together.'));
+</script>
+</body>
+</html>
